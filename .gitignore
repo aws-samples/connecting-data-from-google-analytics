@@ -14,6 +14,7 @@ packages/
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+bandit.yaml
 
 # Don't add the API key
 key_details.json
