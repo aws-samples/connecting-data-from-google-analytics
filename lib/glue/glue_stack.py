@@ -9,7 +9,7 @@ from aws_cdk import(
     aws_s3_deployment as s3_deploy,
     Duration,
     aws_glue as glue,
-    aws_kms,
+    aws_kms as kms,
     aws_s3_deployment as s3deploy,
     aws_secretsmanager as secretsmanager,
     aws_stepfunctions as sfn,
@@ -18,7 +18,7 @@ from aws_cdk import(
     aws_events_targets as targets,
     aws_logs as logs
 )
-import aws_cdk.aws_glue_alpha as glue_a
+import aws_cdk.aws_glue_alpha as glue_alpha
 
 from aws_cdk.aws_stepfunctions import (
     JsonPath
@@ -104,6 +104,33 @@ class GlueJobStack(Stack):
 
     def add_jobs(self):
         
+        self.kms_job = kms.Key(self, id='cmk',
+                               alias=f"{self.job_name}_kms",
+                               enable_key_rotation=True,
+                               pending_window=Duration.days(7),
+                               removal_policy=RemovalPolicy.DESTROY
+                               )     
+        
+        self.kms_job.grant_encrypt_decrypt(self.role)
+        self.service_cloudwatch = iam.ServicePrincipal(service='logs.amazonaws.com')
+        self.kms_job.grant_encrypt_decrypt(self.service_cloudwatch)
+        
+        # Create Security configuration for the job
+        self.glue_security_configuration = glue_alpha.SecurityConfiguration(
+            self,
+            f"{self.job_name}-security-configuration",
+            security_configuration_name=f"{self.job_name}-security-configuration",
+            s3_encryption={"mode": glue_alpha.S3EncryptionMode.S3_MANAGED},
+            job_bookmarks_encryption=glue_alpha.JobBookmarksEncryption(
+                mode=glue_alpha.JobBookmarksEncryptionMode.CLIENT_SIDE_KMS,
+                kms_key=self.kms_job
+            ),
+            cloud_watch_encryption=glue_alpha.CloudWatchEncryption(
+                mode=glue_alpha.CloudWatchEncryptionMode.KMS,
+                kms_key=self.kms_job
+            )       
+        )
+
         # big query ga4 analytics table prefix
         self.table = self.dataset_id + ".events_intraday"
         
@@ -128,20 +155,19 @@ class GlueJobStack(Stack):
             "--gluedatabasename": self.glue_database_name,
             "--gluetablename": self.glue_table_name
         }
-        self.glue_job = glue.CfnJob(
-            self,
-            self.job_name,
-            name=self.job_name,
-            role=self.role.role_arn,
-            allocated_capacity=10,
-            command=glue.CfnJob.JobCommandProperty(
-                name=f"glueetl",
-                python_version="3",
-                script_location=f"s3://{self.data_bucket.bucket_name}/glue-scripts/{self.job_script}",
+
+        self.glue_job = glue_alpha.Job(self, f"{self.job_name}-id",
+            executable=glue_alpha.JobExecutable.python_etl(
+                glue_version=glue_alpha.GlueVersion.V3_0,
+                python_version=glue_alpha.PythonVersion.THREE,
+                script=glue_alpha.Code.from_bucket(self.data_bucket, "glue-scripts/" + self.job_script)
             ),
-            glue_version="3.0",
+            job_name=self.job_name,
+            role=self.role,
             default_arguments=arguments,
-             connections={"connections": [self.connection_name]},
+            security_configuration=self.glue_security_configuration,
+            connections=[glue_alpha.Connection.from_connection_name(self, "bigquery-job-connection", self.connection_name)],
+            description="BigQuery Connector Glue GA4 Data pull and transform"
         )
 
     ##############################################################################
@@ -179,6 +205,7 @@ class GlueJobStack(Stack):
                             "logs:CreateLogGroup",
                             "logs:CreateLogStream",
                             "logs:PutLogEvents",
+                            "logs:AssociateKmsKey"
                         ],
                         resources=[
                             f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws-glue/jobs/logs-v2:*"
@@ -210,9 +237,11 @@ class GlueJobStack(Stack):
             )
         )
 
-        # add managed roles
+        # use managed roles for glue
         self.role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSGlueServiceRole"))
         self.role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonEC2ContainerRegistryReadOnly"))
+        self.role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name('CloudWatchLogsFullAccess'))
         self.gcp_secret.grant_read(self.role)
         
     ##############################################################################
@@ -249,15 +278,16 @@ class GlueJobStack(Stack):
         self.glue_crawler_role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name('service-role/AWSGlueServiceRole'))
 
+
         # create Database
-        glue_database= glue_a.Database(
+        glue_database= glue_alpha.Database(
             self,
             id=self.glue_database_name,
-            database_name=self.glue_database_name,
+            database_name=self.glue_database_name
         )
-        # Retain the database when deleting
-        glue_database.apply_removal_policy(policy=RemovalPolicy.RETAIN)
-
+        # Delete the database when deleting
+        glue_database.apply_removal_policy(policy=RemovalPolicy.DESTROY)
+        
         self.audit_policy = glue.CfnCrawler.SchemaChangePolicyProperty(update_behavior='UPDATE_IN_DATABASE', delete_behavior='LOG')
         
         self.glue_crawler = glue.CfnCrawler(self,f"{self.job_name}-crawler",
