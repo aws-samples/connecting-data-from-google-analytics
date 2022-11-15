@@ -15,7 +15,7 @@ NagSuppressions.add_stack_suppressions(
     [
         {
             "id": "AwsSolutions-IAM5",
-            "reason": "S3Bucket Deployment contains wildcard permissions have apply to bucket",
+            "reason": "S3Bucket Deployment contains a wildcard permissions have apply to bucket",
         },
         {
             "id": "AwsSolutions-IAM4",

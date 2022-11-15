@@ -9,5 +9,6 @@
     "schedule_daily_hour": "3",
     "glue_database": "gcp_analytics",
     "glue_table": "ga4_events",
-    "timedelta_days": "1"
+    "timedelta_days": "1",
+    "Classification": "confidential"
 }

@@ -1,6 +1,6 @@
 import json
 from constructs import Construct
-from aws_cdk import App, Stack,Duration, Stack, CfnOutput
+from aws_cdk import App, Stack,Duration, Stack, CfnOutput,Tags
 
 from aws_cdk import(
     aws_iam as iam,
@@ -38,6 +38,7 @@ class GlueJobStack(Stack):
         self.glue_table_name = self.node.try_get_context("glue_table")
         self.job_name = self.node.try_get_context("job_name")
         self.timedelta_days = self.node.try_get_context("timedelta_days")
+        self.classification = self.node.try_get_context("classification")
         
         self.add_buckets(self.data_bucket_name)
         self.add_secret()
@@ -74,7 +75,10 @@ class GlueJobStack(Stack):
             auto_delete_objects=True
         )
         CfnOutput(self, "glue-data-bucket-name", value=self.data_bucket.bucket_name)
-        CfnOutput(self, "glue-asset-bucket-name", value=self.glue_asset_bucket.bucket_name)       
+        CfnOutput(self, "glue-asset-bucket-name", value=self.glue_asset_bucket.bucket_name)   
+        # tag data to classification
+        Tags.of(self.data_bucket).add("Classification", self.classification)   
+        Tags.of(self.glue_asset_bucket).add("Classification", self.classification)   
 
     ##########################################################################################
     # Secret: note - manually need to update the secret value in Console with the GCP secret

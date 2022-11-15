@@ -9,6 +9,7 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 from awsglue import DynamicFrame
 from pyspark.sql.functions import col, lit, explode, collect_list, struct
+import logging
 
 # Glue script to handle the complex data types such as event_params
 
@@ -42,23 +43,28 @@ def sparkSqlQuery(glueContext, query, mapping, transformation_ctx) -> DynamicFra
 def leftJoinTable(glueContext, datasource, right_df) -> DynamicFrame:
     datasource0_DF = datasource.toDF()
     right_df = right_df.toDF()
-    result = DynamicFrame.fromDF(
-        datasource0_DF.join(
-            right_df,
-            (
-                datasource0_DF["join_key"]
-                == right_df["`join_key`"]
+    if right_df:
+        result = DynamicFrame.fromDF(
+            datasource0_DF.join(
+                right_df,
+                (
+                    datasource0_DF["join_key"]
+                    == right_df["`join_key`"]
+                ),
+                "leftouter",
             ),
-            "leftouter",
-        ),
-        glueContext,
-        "Join_node1663684948739",
-    )
-    return result
+            glueContext,
+            "Join_node1663684948739",
+        )
+        return result
+    else:
+        return datasource
 
 def flattenNestedData(glueContext, datasource, column_name,data_type) -> DynamicFrame:
     
-    # get the join_key and the nest events column as an array
+    # get the join_key and convert the event_params nested events column as an array
+    # as event_params is bigquery RECORD data type
+    
     SqlQuery0 = """
     SELECT join_key,array(event_params) as event_params from myDataSource
 
@@ -96,7 +102,7 @@ def flattenNestedData(glueContext, datasource, column_name,data_type) -> Dynamic
         transformation_ctx="SQL_node1663596786370",
     )
     
-    # rename the column to the event_param name
+    # rename the column to the event_param name such as page_title
     result = RenameField.apply(
         frame = flat_data_filtered, 
         old_name = f"`event_params.val.val.value.{data_type}_value`",
@@ -135,7 +141,7 @@ datasource0 = glueContext.create_dynamic_frame.from_options(
     transformation_ctx="datasource0 ",
 )
 
-# create a join key
+# add a composite join key on the input data from BigQuery
 SqlQuery0 = """
 select 
 concat(event_name,event_timestamp,user_pseudo_id) as join_key,*
@@ -148,7 +154,8 @@ datasource0_selectedfields = sparkSqlQuery(
     transformation_ctx="SQL_node1662231599921",
 )
 
-# flatten event_params columns note: does not include all
+# flatten the RECORD type event_params columns such as the page_title and page_referrer
+
 page_title_flat= flattenNestedData(
     glueContext,
     datasource=datasource0_selectedfields,
@@ -186,12 +193,17 @@ session_engaged_flat = flattenNestedData(
     data_type="string",
 )
 
-# join the nested columns to the base table
+# left join each of the nested columns to the base table
 join_all=leftJoinTable(glueContext, datasource0_selectedfields, page_title_flat)
+
 join_all=leftJoinTable(glueContext, join_all, page_location_flat)
+
 join_all=leftJoinTable(glueContext, join_all, ga_session_id_flat)
+
 join_all=leftJoinTable(glueContext, join_all, page_referrer_flat)
+
 join_all=leftJoinTable(glueContext, join_all, percent_scrolled_flat)
+
 join_all=leftJoinTable(glueContext, join_all, session_engaged_flat)
 
 #  Drop join_key field
