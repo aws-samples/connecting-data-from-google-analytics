@@ -4,7 +4,7 @@
 
 Solutions guidance for ingesting Google Analytics 4 data into AWS for marketing analytics and activating marketing channels with customized audience profiles. 
 
-This sample solution will help securely ingest and analyze first-party from GA4 to combine it with third-party data in AWS. Marketers can further use this information to activate marketing channels with customized segments.
+This sample solution will help organizations securely ingest first-party data from GA4 to combine it with third-party data in AWS. As a result, marketers can further use this information to activate marketing channels with customized segments.
 
 ## Solution Architecture
 
