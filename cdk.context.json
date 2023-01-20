@@ -1,0 +1,14 @@
+{
+    "job_name": "bigquery-analytics",
+    "data_bucket_name": "your-s3-bucket-name",
+    "dataset_id": "Big Query Dataset ID",
+    "parent_project": "GCP Project ID",
+    "connection_name": "bigquery",
+    "filter": "",
+    "job_script": "job-analytics-relationalize-flat.py",
+    "schedule_daily_hour": "3",
+    "glue_database": "gcp_analytics",
+    "glue_table": "ga4_events",
+    "timedelta_days": "1",
+    "Classification": "confidential"
+}
