@@ -1,10 +1,12 @@
-#  AWS Glue Connector Ingestion for GA4 Analytics
+#  Guidance for Connecting Data from Google Analytics to AWS Clean Rooms
+
+This guidance provides a reference architecture for the ingestion of Google Analytics v4 (GA4) data from Google Cloud Big Query into AWS for data analytics and collaboration.
 
 ## Overview
 
 Solutions guidance for ingesting Google Analytics 4 data into AWS for marketing analytics and activating marketing channels with customized audience profiles. 
 
-This sample solution will help organizations securely ingest first-party data from GA4 to combine it with third-party data in AWS. As a result, marketers can further use this information to activate marketing channels with customized segments.
+This sample solution will help organizations securely ingest first-party data from GA4 and combine it with third-party data in AWS. As a result, marketers can further use this information to activate marketing channels with customized segments.
 
 ## Solution Architecture
 
