@@ -14,8 +14,8 @@ The architecture uses a Step Function to orchestrate the AWS Glue job and data c
 
 1.	Amazon EventBridge scheduled rule executes and starts the AWS Step Function workflow.
 2.	Google Cloud Big Query access credentials are securely stored in Secrets Manager and encrypted with AWS Key Management Service (KMS).
-3.	AWS Glue job will be executed ingesting data using the AWS Marketplace Google BigQuery Connector for AWS Glue. The Connector simplifies the process of connecting of extracting data from BigQuery. The AWS Glue job normalizes and hash the data. 
-4.	The AWS Glue Job output data is written to the target Amazon S3 bucket:prefix location in parquet format, partitioned by date, and encrypted with AWS Key Management Service (KMS).
+3.	AWS Glue job will ingest data using the AWS Marketplace Google BigQuery Connector for AWS Glue. The Connector simplifies the process of connecting AWS Glue jobs to extract data from BigQuery. This AWS Glue job will encrypt, normalize, and hash the data. 
+4.	The output of the AWS Glue job is written to the target Amazon Simple Storage Service (Amazon S3) bucket:prefix location in parquet format. After an AWS Clean Rooms collaboration, custom audience data such as emails, phone numbers, or mobile advertiser IDs are hashed, encrypted, and stored in designated prefixes. The output file setting is partitioned by date and encrypted with AWS KMS.
 5.	AWS Glue Crawler job is triggered to "refresh" the table definition and its associated meta-data in the AWS Glue Data Catalog.
 6.	The Data Consumer queries the data output with Amazon Athena.
 
