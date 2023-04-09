@@ -10,5 +10,5 @@
     "glue_database": "gcp_analytics",
     "glue_table": "ga4_events",
     "timedelta_days": "1",
-    "Classification": "confidential"
+    "classification": "confidential"
 }
