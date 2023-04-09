@@ -53,7 +53,8 @@ Update the cdk.context.json with
     "schedule_daily_hour": "3",
     "glue_database": "gcp_analytics",
     "glue_table": "ga4_events",
-    "timedelta_days": "1"
+    "timedelta_days": "1",
+    "classification": "confidential"
 }
 ```
 #### Context Parameter Summary
@@ -69,6 +70,7 @@ Update the cdk.context.json with
 9. glue_database - Glue database name
 10. glue_table - Glue table name
 11. timedelta_days: Number of days back to pull events.   0 = today, 1 = yesterday, default 1
+12. classification": data classification tag for the s3 bucket default confidential
 
 
 ## CDK Deployment
